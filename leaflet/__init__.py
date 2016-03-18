@@ -19,6 +19,8 @@ from django.contrib.staticfiles.templatetags.staticfiles import static
 from django.utils.translation import ugettext_lazy as _
 from django.utils import six
 
+default_app_config = 'leaflet.apps.LeafletConfig'
+
 
 DEFAULT_TILES = [(_('OSM'), '//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                   '© <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors')]
@@ -197,5 +199,3 @@ def _normalize_plugins_config():
             PLUGINS[PLUGIN_ALL].setdefault(resource_type, []).extend(urls)
 
     PLUGINS['__is_normalized__'] = True
-
-_normalize_plugins_config()
