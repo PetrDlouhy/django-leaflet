@@ -1,12 +1,12 @@
 *django-leaflet* allows you to use `Leaflet <http://leafletjs.com>`_
 in your `Django <https://www.djangoproject.com>`_ projects.
 
-It embeds Leaflet in version *0.7.5*.
+It embeds Leaflet version *0.7.7*.
 
-.. image:: https://pypip.in/v/django-leaflet/badge.png
+.. image:: https://img.shields.io/pypi/v/django-leaflet.svg
         :target: https://pypi.python.org/pypi/django-leaflet
 
-.. image:: https://pypip.in/d/django-leaflet/badge.png
+.. image:: https://img.shields.io/pypi/dm/django-leaflet.svg
         :target: https://pypi.python.org/pypi/django-leaflet
 
 .. image:: https://travis-ci.org/makinacorpus/django-leaflet.png
@@ -211,6 +211,17 @@ If it contains several layers, a layer switcher will then be added automatically
 
     'TILES': [('Satellite', 'http://server/a/...', {'attribution': '&copy; Big eye', 'maxZoom': 16}),
               ('Streets', 'http://server/b/...', {'attribution': '&copy; Contributors'})]
+
+
+If you omit this setting, a default OpenSTreetMap layer will be created for your convenience. If you do not want
+a default layers (perhaps to add them in your own JavaScript code on map initialization), set the value to an empty
+list, as shown below.
+
+::
+
+    'TILES': []
+
+Note that this will also prevent any overlays defined in settings from being displayed.
 
 
 Overlay layers
@@ -605,6 +616,8 @@ AUTHORS
 * David Martinez Morata
 * `NotSqrt <https://github.com/NotSqrt>`_
 * `Dylan Verheul <https://github.com/dyve>`_
+* `Mactory <https://github.com/Mactory>`_
+* `Petr Dlouhy <https://github.com/PetrDlouhy>`_
 
 |makinacom|_
 

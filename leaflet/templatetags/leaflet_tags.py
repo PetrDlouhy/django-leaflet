@@ -9,7 +9,7 @@ from django.utils import six
 from django.utils.encoding import force_text
 
 from leaflet import (app_settings, SPATIAL_EXTENT, SRID, PLUGINS, PLUGINS_DEFAULT,
-                     PLUGIN_ALL, PLUGIN_FORMS)
+                     PLUGIN_ALL, PLUGIN_FORMS, JSONLazyTranslationEncoder)
 
 
 register = template.Library()
@@ -40,11 +40,14 @@ def leaflet_js(plugins=None):
     plugin_names = _get_plugin_names(plugins)
     with_forms = PLUGIN_FORMS in plugin_names or PLUGIN_ALL in plugin_names
     FORCE_IMAGE_PATH = app_settings.get('FORCE_IMAGE_PATH')
+    template_options = settings.TEMPLATES \
+        and len(settings.TEMPLATES) \
+        and settings.TEMPLATES[0].get('OPTIONS', None)
 
-    if hasattr(settings, 'TEMPLATE_DEBUG'):
+    if template_options and 'debug' in template_options:
+        debug = template_options['debug']
+    elif hasattr(settings, 'TEMPLATE_DEBUG'):
         debug = settings.TEMPLATE_DEBUG
-    elif 'debug' in settings.TEMPLATES[0]['OPTIONS']:
-        debug = settings.TEMPLATES[0]['OPTIONS']['debug']
     else:
         debug = False
 
@@ -71,43 +74,47 @@ def leaflet_map(name, callback=None, fitextent=True, creatediv=True,
     :param settings_overrides:
     :return:
     """
-    extent = None
-    if SPATIAL_EXTENT is not None:
-        # Leaflet uses [lat, lng]
-        xmin, ymin, xmax, ymax = SPATIAL_EXTENT
-        extent = (ymin, xmin, ymax, xmax)
 
     if settings_overrides == '':
         settings_overrides = {}
-    app_settings.update(**settings_overrides)
+
+    instance_app_settings = app_settings.copy()  # Allow not overidding global app_settings
+    instance_app_settings.update(**settings_overrides)
+
+    extent = None
+    if instance_app_settings['SPATIAL_EXTENT'] is not None:
+        # Leaflet uses [lat, lng]
+        xmin, ymin, xmax, ymax = instance_app_settings['SPATIAL_EXTENT']
+        bbox = (ymin, xmin, ymax, xmax)
+        extent = [bbox[:2], bbox[2:4]]
 
     djoptions = dict(
         srid=SRID,
-        extent=[extent[:2], extent[2:4]],
+        extent=extent,
         fitextent=fitextent,
-        center=app_settings['DEFAULT_CENTER'],
-        zoom=app_settings['DEFAULT_ZOOM'],
-        minzoom=app_settings['MIN_ZOOM'],
-        maxzoom=app_settings['MAX_ZOOM'],
-        layers=[(force_text(label), url, attrs) for (label, url, attrs) in app_settings.get('TILES')],
-        overlays=[(force_text(label), url, attrs) for (label, url, attrs) in app_settings.get('OVERLAYS')],
-        attributionprefix=force_text(app_settings.get('ATTRIBUTION_PREFIX'), strings_only=True),
-        scale=app_settings.get('SCALE'),
-        minimap=app_settings.get('MINIMAP'),
-        resetview=app_settings.get('RESET_VIEW'),
-        tilesextent=list(app_settings.get('TILES_EXTENT', []))
+        center=instance_app_settings['DEFAULT_CENTER'],
+        zoom=instance_app_settings['DEFAULT_ZOOM'],
+        minzoom=instance_app_settings['MIN_ZOOM'],
+        maxzoom=instance_app_settings['MAX_ZOOM'],
+        layers=[(force_text(label), url, attrs) for (label, url, attrs) in instance_app_settings.get('TILES')],
+        overlays=[(force_text(label), url, attrs) for (label, url, attrs) in instance_app_settings.get('OVERLAYS')],
+        attributionprefix=force_text(instance_app_settings.get('ATTRIBUTION_PREFIX'), strings_only=True),
+        scale=instance_app_settings.get('SCALE'),
+        minimap=instance_app_settings.get('MINIMAP'),
+        resetview=instance_app_settings.get('RESET_VIEW'),
+        tilesextent=list(instance_app_settings.get('TILES_EXTENT', []))
     )
 
     return {
         # templatetag options
         'name': name,
-        'loadevents': json.dumps(loadevent.split()),
+        'loadevents': json.dumps(loadevent.split(), cls=JSONLazyTranslationEncoder),
         'creatediv': creatediv,
         'callback': callback,
         # initialization options
-        'djoptions': json.dumps(djoptions),
+        'djoptions': json.dumps(djoptions, cls=JSONLazyTranslationEncoder),
         # settings
-        'NO_GLOBALS': app_settings.get('NO_GLOBALS'),
+        'NO_GLOBALS': instance_app_settings.get('NO_GLOBALS'),
     }
 
 
@@ -120,7 +127,7 @@ def leaflet_json_config():
         settings_as_json['SPATIAL_EXTENT'] = {'xmin': xmin, 'ymin': ymin,
                                               'xmax': xmax, 'ymax': ymax}
 
-    return json.dumps(settings_as_json)
+    return json.dumps(settings_as_json, cls=JSONLazyTranslationEncoder)
 
 
 def _get_plugin_names(plugin_names_from_tag_parameter):

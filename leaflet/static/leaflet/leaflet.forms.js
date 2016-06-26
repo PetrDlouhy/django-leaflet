@@ -35,11 +35,19 @@ L.FieldStore = L.Class.extend({
         }
 
         var geojson = geom.toGeoJSON();
-        var is_geometrycollection = geojson.geometry.type == 'GeometryCollection'
+        var is_geometrycollection = (geojson.geometry && geojson.geometry.type == 'GeometryCollection');
         if (is_multi && is_generic && !is_geometrycollection) {
             var flat = {type: 'GeometryCollection', geometries: []};
             for (var i=0; i < geojson.features.length; i++) {
                 flat.geometries.push(geojson.features[i].geometry);
+            }
+            geojson = flat;
+        }
+        // In order to make multipoint work, it seems we need to treat it similarly to the GeometryCollections
+        else if (this.options.geom_type == 'MULTIPOINT') {
+            var flat = {type: 'MultiPoint', coordinates: []};
+            for (var i=0; i < geojson.features.length; i++) {
+                flat.coordinates.push(geojson.features[i].geometry.coordinates);
             }
             geojson = flat;
         }

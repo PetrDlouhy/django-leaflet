@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
+import json
 
 import django
 from django.test import SimpleTestCase
 from django.contrib.gis.db import models as gismodels
 
-from .. import PLUGINS, PLUGIN_FORMS, _normalize_plugins_config
+from .. import PLUGINS, PLUGIN_FORMS, _normalize_plugins_config, JSONLazyTranslationEncoder
+from django.utils import six
+from django.utils.translation import ugettext_lazy
 from ..templatetags import leaflet_tags
 from ..admin import LeafletGeoAdmin
 from ..forms.widgets import LeafletWidget
@@ -107,6 +110,9 @@ class LeafletFieldsWidgetsTest(SimpleTestCase):
 class DummyModel(gismodels.Model):
     geom = gismodels.PointField()
 
+    class Meta:
+        app_label = "leaflet"
+
 
 class DummyAdmin(LeafletGeoAdmin):
     settings_overrides = {
@@ -186,6 +192,24 @@ class SettingsOverridesTest(SimpleTestCase):
         output = widget.render('geom', '', {'id': 'geom'})
         self.assertIn('"center": [8.0, 3.14]', output)
 
+    def test_spatial_extent_settings_overrides(self):
+        widget = LeafletWidget(attrs={
+            'settings_overrides': {
+                'SPATIAL_EXTENT': (
+                    3.812255859375,
+                    50.387507803003146,
+                    4.0869140625,
+                    50.523904629228625,
+                ),
+                'DEFAULT_ZOOM': None,
+                'DEFAULT_CENTER': None,
+            }
+        })
+        output = widget.render('geom', '', {'id': 'geom'})
+        self.assertIn('"extent": [[50.387507803003146, 3.812255859375], [50.523904629228625, 4.0869140625]]', output)
+        self.assertIn('"center": null', output)
+        self.assertIn('"zoom": null', output)
+
 
 class LeafletModelFormTest(SimpleTestCase):
 
@@ -220,3 +244,12 @@ class LeafletGeoAdminMapTest(LeafletGeoAdminTest):
         output = widget.render('geom', '', {'id': 'geom'})
         self.assertIn(".module .leaflet-draw ul", output)
         self.assertIn('<div id="geom_div_map">', output)
+
+
+class JSONLazyTranslationEncoderTest(SimpleTestCase):
+
+    def test_lazy_translation_encoding(self):
+        text = ugettext_lazy('text')
+        ret = json.dumps(text, cls=JSONLazyTranslationEncoder)
+        self.assertIsInstance(ret, six.string_types)
+        self.assertEqual(ret, '"text"')
